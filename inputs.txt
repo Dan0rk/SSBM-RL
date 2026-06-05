@@ -1,0 +1,7 @@
+left = cs left
+right = cs right
+down = cs down
+jump = Button X
+light Attack = Button A
+heavy Attack = Button B
+block = Trigger L
