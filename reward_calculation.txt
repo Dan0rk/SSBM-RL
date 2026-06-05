@@ -1,0 +1,7 @@
+WHEN TO GIVE WHAT REWARDS:
+
+damage dealt to enemy + reward
+damage received - reward
+enemy lifes reduced + reward
+own lifes reduced - reward
+
