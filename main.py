@@ -2,6 +2,7 @@ import melee
 import argparse
 import signal
 import sys
+import gymnasium as gym
 
 
 if __name__ == '__main__':
@@ -74,6 +75,42 @@ if __name__ == '__main__':
     custome = 0
     framedata = melee.framedata.FrameData()
     menu_helper = melee.MenuHelper()
+
+
+    class MeleeEnv(gym.Env):
+        def reset(self): # Does a soft reset of the game, by sending inputs to get through the menu, and then starting a new game.
+            gamestate = console.step() # Step the console forward one frame, and receive the new gamestate
+            if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                while gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                    for port, controller in controllers.items():
+                        menu_helper.menu_helper_simple(
+                        gamestate,
+                        controller,
+                        melee.Character.FOX,
+                        melee.Stage.YOSHIS_STORY,
+                        costume=port,
+                        autostart=port == 1,
+                        swag=False)
+                    if log:
+                        log.skipframe()
+                    gamestate = console.step() # Step the console forward one frame, and receive the new gamestate
+            if gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                while gamestate.menu_state not in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
+                    for port, controller in controllers.items():
+                        menu_helper.menu_helper_simple(
+                        gamestate,
+                        controller,
+                        melee.Character.FOX,
+                        melee.Stage.YOSHIS_STORY,
+                        costume=port,
+                        autostart=port == 1,
+                        swag=False)
+                    if log:
+                        log.skipframe()
+                    gamestate = console.step() # Step the console forward one frame, and receive the new gamestate
+
+        def step(self, action):
+
 
     #MAIN LOOP
     while True:
