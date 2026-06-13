@@ -3,10 +3,10 @@ import argparse
 import signal
 import sys
 import melee
-import random
 
 # This example program demonstrates how to use the Melee API to run a console,
 #   setup controllers, and send button presses over to a console
+
 
 def check_port(value):
     ivalue = int(value)
@@ -15,17 +15,26 @@ def check_port(value):
                                          Must be 1, 2, 3, or 4." % value)
     return ivalue
 
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='Example of libmelee in action')
-    parser.add_argument('--debug', '-d', action='store_true',
-                        help='Debug mode. Creates a CSV of all game states')
-    parser.add_argument('--address', '-a', default="127.0.0.1",
-                        help='IP address of Slippi/Wii')
-    parser.add_argument('--dolphin_executable_path', '-e', default=None,
-                        help='The directory where dolphin is')
-    parser.add_argument('--iso', default=None, type=str,
-                        help='Path to melee iso.')
+    parser = argparse.ArgumentParser(description="Example of libmelee in action")
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Debug mode. Creates a CSV of all game states",
+    )
+    parser.add_argument(
+        "--address", "-a", default="127.0.0.1", help="IP address of Slippi/Wii"
+    )
+    parser.add_argument(
+        "--dolphin_executable_path",
+        "-e",
+        default=None,
+        help="The directory where dolphin is",
+    )
+    parser.add_argument("--iso", default=None, type=str, help="Path to melee iso.")
 
     args = parser.parse_args()
 
@@ -57,9 +66,8 @@ if __name__ == "__main__":
 
     controllers = {
         port: melee.Controller(
-            console=console,
-            port=port,
-            type=melee.ControllerType.STANDARD)
+            console=console, port=port, type=melee.ControllerType.STANDARD
+        )
         for port in ports
     }
 
@@ -70,7 +78,7 @@ if __name__ == "__main__":
         console.stop()
         if args.debug:
             log.writelog()
-            print("") #because the ^C will be on the terminal
+            print("")  # because the ^C will be on the terminal
             print("Log file created: " + log.filename)
         print("Shutting down cleanly...")
         sys.exit(0)
@@ -113,7 +121,11 @@ if __name__ == "__main__":
         # The console object keeps track of how long your bot is taking to process frames
         #   And can warn you if it's taking too long
         if console.processingtime * 1000 > 12:
-            print("WARNING: Last frame took " + str(console.processingtime*1000) + "ms to process.")
+            print(
+                "WARNING: Last frame took "
+                + str(console.processingtime * 1000)
+                + "ms to process."
+            )
 
         # What menu are we in?
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
@@ -122,7 +134,9 @@ if __name__ == "__main__":
                 # NOTE: This is where your AI does all of its stuff!
                 # This line will get hit once per frame, so here is where you read
                 #   in the gamestate and decide what buttons to push on the controller
-                melee.techskill.multishine(ai_state=gamestate.players[port], controller=controller)
+                melee.techskill.multishine(
+                    ai_state=gamestate.players[port], controller=controller
+                )
 
             # Log this frame's detailed info if we're in game
             if log:
@@ -137,7 +151,8 @@ if __name__ == "__main__":
                     melee.Stage.YOSHIS_STORY,
                     costume=port,
                     autostart=port == 1,
-                    swag=False)
+                    swag=False,
+                )
 
             # If we're not in game, don't log the frame
             if log:

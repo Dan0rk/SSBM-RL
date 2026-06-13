@@ -1,0 +1,6 @@
+Upgrade Rewards: Rewards for staying center to increase survivability
+FIX: Episodes end happening at wrong time
+
+
+Allow multiple ENVS to run and train the the same time
+Add missing actions
