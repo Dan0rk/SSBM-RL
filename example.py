@@ -25,9 +25,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Debug mode. Creates a CSV of all game states",
     )
-    parser.add_argument(
-        "--address", "-a", default="127.0.0.1", help="IP address of Slippi/Wii"
-    )
+    parser.add_argument("--address", "-a", default="127.0.0.1", help="IP address of Slippi/Wii")
     parser.add_argument(
         "--dolphin_executable_path",
         "-e",
@@ -57,6 +55,7 @@ if __name__ == "__main__":
         fullscreen=False,
     )
 
+    print(args.dolphin_executable_path)
     # Create our Controller object
     #   The controller is the second primary object your bot will interact with
     #   Your controller is your way of sending button presses to the game, whether
@@ -64,12 +63,7 @@ if __name__ == "__main__":
 
     ports = [1, 2]
 
-    controllers = {
-        port: melee.Controller(
-            console=console, port=port, type=melee.ControllerType.STANDARD
-        )
-        for port in ports
-    }
+    controllers = {port: melee.Controller(console=console, port=port, type=melee.ControllerType.STANDARD) for port in ports}
 
     # This isn't necessary, but makes it so that Dolphin will get killed when you ^C
     def signal_handler(sig, frame):
@@ -121,11 +115,7 @@ if __name__ == "__main__":
         # The console object keeps track of how long your bot is taking to process frames
         #   And can warn you if it's taking too long
         if console.processingtime * 1000 > 12:
-            print(
-                "WARNING: Last frame took "
-                + str(console.processingtime * 1000)
-                + "ms to process."
-            )
+            print("WARNING: Last frame took " + str(console.processingtime * 1000) + "ms to process.")
 
         # What menu are we in?
         if gamestate.menu_state in [melee.Menu.IN_GAME, melee.Menu.SUDDEN_DEATH]:
@@ -134,9 +124,7 @@ if __name__ == "__main__":
                 # NOTE: This is where your AI does all of its stuff!
                 # This line will get hit once per frame, so here is where you read
                 #   in the gamestate and decide what buttons to push on the controller
-                melee.techskill.multishine(
-                    ai_state=gamestate.players[port], controller=controller
-                )
+                melee.techskill.multishine(ai_state=gamestate.players[port], controller=controller)
 
             # Log this frame's detailed info if we're in game
             if log:
