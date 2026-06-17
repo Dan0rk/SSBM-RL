@@ -14,7 +14,6 @@ Huge thanks to the team behind libmelee. It saved a lot of time and allowed me t
 
 ## Current agenda
 
-- After the recent Slippi update, `libmelee` is temporarily no longer compatible until an updated version is released
 - Expand the AI action space to allow a wider range of moves
 - Rework the reward system to encourage better gameplay behavior
 - Build a tool to manage multiple training environments in parallel to speed up training

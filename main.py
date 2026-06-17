@@ -3,9 +3,12 @@ import argparse
 import signal
 import sys
 import gymnasium as gym
+from gymnasium.wrappers import TimeLimit
 import numpy as np
 from stable_baselines3 import PPO
 import random
+import os
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 if __name__ == "__main__":
 
@@ -122,28 +125,101 @@ if __name__ == "__main__":
 
             self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(21,), dtype=np.float32)
 
-            self.action_space = gym.spaces.Discrete(7)  # n = number of possible actions
+            self.action_space = gym.spaces.Discrete(29)  # n = number of possible actions
 
         def do_action(self, action, controller):
+            # 0       neutral
+            # 1-6     movement (run left/right, walk left/right, stick up/down)
+            # 7       jump
+            # 8-13    shield / dodge (L is auto-reinterpreted as airdodge/wavedash when airborne)
+            # 14      grab
+            # 15-19   jab + tilts (sub-smash-threshold stick magnitude, so it won't misfire as a smash)
+            # 20-23   smashes (via C-stick: instant full deflection still reads as a smash, no flick-speed needed)
+            # 24-28   specials: neutral / side-left / side-right / up / down
+
             controller.release_all()
-            # Default: neutral stick. Specific actions below override this.
-            controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
 
-            controller.press_shoulder(melee.Button.BUTTON_L, 0.0)
+            if action == 0:  # neutral
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
 
-            if action == 0 or action == 4:  # no action or temp shield
-                pass
-            elif action == 1:  # move left
+            elif action == 1:  # run left
                 controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.0, 0.5)
-            elif action == 2:  # move right
+            elif action == 2:  # run right
                 controller.tilt_analog(melee.Button.BUTTON_MAIN, 1.0, 0.5)
-            elif action == 3:  # jump
+            elif action == 3:  # walk left (precise spacing, below dash threshold)
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.35, 0.5)
+            elif action == 4:  # walk right
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.65, 0.5)
+            elif action == 5:  # stick up (climb platform, look up)
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 1.0)
+            elif action == 6:  # stick down (crouch, fall through platform, fast-fall)
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.0)
+
+            elif action == 7:  # jump (also serves as the double jump if used again airborne)
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
                 controller.press_button(melee.Button.BUTTON_X)
-            elif action == 4:  # shield
+
+            elif action == 8:  # full shield, neutral
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
                 controller.press_shoulder(melee.Button.BUTTON_L, 1.0)
-            elif action == 5:  # attack
+            elif action == 9:  # light shield (cheaper shield, useful for powershield/wavedash setups)
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
+                controller.press_shoulder(melee.Button.BUTTON_L, 0.4)
+            elif action == 10:  # shield+left  -> airdodge/wavedash left when airborne
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.0, 0.5)
+                controller.press_shoulder(melee.Button.BUTTON_L, 1.0)
+            elif action == 11:  # shield+right -> airdodge/wavedash right when airborne
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 1.0, 0.5)
+                controller.press_shoulder(melee.Button.BUTTON_L, 1.0)
+            elif action == 12:  # spot dodge / airdodge down
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.0)
+                controller.press_shoulder(melee.Button.BUTTON_L, 1.0)
+            elif action == 13:  # airdodge up
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 1.0)
+                controller.press_shoulder(melee.Button.BUTTON_L, 1.0)
+
+            elif action == 14:  # grab
+                controller.press_button(melee.Button.BUTTON_Z)
+
+            elif action == 15:  # neutral jab
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
                 controller.press_button(melee.Button.BUTTON_A)
-            elif action == 6:  # special
+            elif action == 16:  # forward tilt left
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.35, 0.5)
+                controller.press_button(melee.Button.BUTTON_A)
+            elif action == 17:  # forward tilt right
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.65, 0.5)
+                controller.press_button(melee.Button.BUTTON_A)
+            elif action == 18:  # up tilt
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.65)
+                controller.press_button(melee.Button.BUTTON_A)
+            elif action == 19:  # down tilt
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.35)
+                controller.press_button(melee.Button.BUTTON_A)
+
+            elif action == 20:  # smash left
+                controller.tilt_analog(melee.Button.BUTTON_C, 0.0, 0.5)
+            elif action == 21:  # smash right
+                controller.tilt_analog(melee.Button.BUTTON_C, 1.0, 0.5)
+            elif action == 22:  # smash up
+                controller.tilt_analog(melee.Button.BUTTON_C, 0.5, 1.0)
+            elif action == 23:  # smash down
+                controller.tilt_analog(melee.Button.BUTTON_C, 0.5, 0.0)
+
+            elif action == 24:  # neutral special
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.5)
+                controller.press_button(melee.Button.BUTTON_B)
+            elif action == 25:  # side special left
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.0, 0.5)
+                controller.press_button(melee.Button.BUTTON_B)
+            elif action == 26:  # side special right
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 1.0, 0.5)
+                controller.press_button(melee.Button.BUTTON_B)
+            elif action == 27:  # up special
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 1.0)
+                controller.press_button(melee.Button.BUTTON_B)
+            elif action == 28:  # down special
+                controller.tilt_analog(melee.Button.BUTTON_MAIN, 0.5, 0.0)
                 controller.press_button(melee.Button.BUTTON_B)
 
         def _compute_reward(self, gamestate):
@@ -170,6 +246,18 @@ if __name__ == "__main__":
             # Stock lost by AI is negative reward
             if ai_now.stock < ai_prev.stock:
                 reward -= 1.0
+
+            if opp_now.stock == 0 and opp_prev.stock != 0:
+                reward += 10.0
+            if ai_now.stock == 0 and ai_prev.stock != 0:
+                reward -= 10.0
+
+            # Small stage control reward: encourage moving closer to center
+            # Keep this term low so damage and stock rewards remain dominant.
+            center_distance_prev = abs(ai_prev.position.x)
+            center_distance_now = abs(ai_now.position.x)
+            reward += (center_distance_prev - center_distance_now) * 0.0003
+
             self.previous_gamestate = gamestate
             return reward
 
@@ -220,6 +308,7 @@ if __name__ == "__main__":
         def reset(
             self, seed=None, options=None
         ):  # Does a soft reset of the game, by sending inputs to get through the menu, and then starting a new game.
+            print("Resetting environment and starting new / next game...")
             super().reset(seed=seed)
             gamestate = self.console.step()  # Step the console forward one frame, and receive the new gamestate
 
@@ -260,6 +349,7 @@ if __name__ == "__main__":
 
                 # apply same action for multiple frames
                 self.do_action(action, self.controllers[self.ai_port])
+                self.controllers[self.ai_port].flush()  # make sure the action is sent to the console immediately
 
                 obs = get_observation(gamestate, self.ai_port, self.opponent_port)
                 reward = self._compute_reward(gamestate)
@@ -271,12 +361,14 @@ if __name__ == "__main__":
                     self.log.logframe(gamestate)
                     self.log.writeframe()
 
-                terminated = gamestate.players[self.ai_port].stock == 0 or gamestate.players[self.opponent_port].stock == 0
+                if gamestate.players[self.ai_port].stock == 0 or gamestate.players[self.opponent_port].stock == 0:
+                    terminated = True
 
                 if terminated:
                     break
-
             return obs, total_reward, terminated, False, info
+
+    action_repeat = 4  # repeat each action for 4 frames to reduce the frequency of decision-making (and make it more likely to hit inputs like double jump that require precise timing)
 
     env = MeleeEnv(
         console=console,
@@ -285,18 +377,18 @@ if __name__ == "__main__":
         ai_port=1,
         opponent_port=2,
         log=log,
-        opponent_cpu_level=10,  # set low for training
+        opponent_cpu_level=9,  # set low for training
+        action_repeat=action_repeat,  # repeat each action for 4 frames to reduce the frequency of decision-making (and make it more likely to hit inputs like double jump that require precise timing)
     )
+    os.makedirs("./checkpoints", exist_ok=True)
 
     model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=100_0000)
-    model.save("ppo_melee")
 
+    steps_per_second = 60 / action_repeat  # = 15
+    steps_per_hour = int(3600 * steps_per_second)
 
-"""     obs, info = env.reset()
-    for _ in range(10000):
-        action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(action)
-        print(reward, terminated)
-        if terminated:
-            obs, info = env.reset() """
+    checkpoint_callback = CheckpointCallback(save_freq=steps_per_hour, save_path="./checkpoints/", name_prefix="ppo_melee", save_best_only=False)
+
+    model.learn(total_timesteps=325_000, callback=checkpoint_callback)
+    model.save("ppo_melee_final")
+    print("Training complete. Model saved as ppo_melee_final")
