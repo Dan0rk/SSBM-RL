@@ -3,7 +3,6 @@ import argparse
 import signal
 import sys
 import gymnasium as gym
-from gymnasium.wrappers import TimeLimit
 import numpy as np
 from stable_baselines3 import PPO
 import random
@@ -27,6 +26,13 @@ if __name__ == "__main__":
         help="The directory where dolphin is",
     )
     parser.add_argument("--iso", default=None, type=str, help="Path to melee iso.")
+    parser.add_argument(
+        "--load-model",
+        "-l",
+        type=str,
+        default=None,
+        help="Path to a pre-trained model to load",
+    )
     args = parser.parse_args()
 
     log = None
@@ -382,12 +388,16 @@ if __name__ == "__main__":
     )
     os.makedirs("./checkpoints", exist_ok=True)
 
-    model = PPO("MlpPolicy", env, verbose=1)
+    if args.load_model:
+        print(f"Loading model from {args.load_model}...")
+        model = PPO.load(args.load_model, env=env)
+    else:
+        model = PPO("MlpPolicy", env, verbose=1)
 
     steps_per_second = 60 / action_repeat  # = 15
     steps_per_hour = int(3600 * steps_per_second)
 
-    checkpoint_callback = CheckpointCallback(save_freq=steps_per_hour, save_path="./checkpoints/", name_prefix="ppo_melee", save_best_only=False)
+    checkpoint_callback = CheckpointCallback(save_freq=steps_per_hour, save_path="./checkpoints/", name_prefix="ppo_melee")
 
     model.learn(total_timesteps=325_000, callback=checkpoint_callback)
     model.save("ppo_melee_final")
